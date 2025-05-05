@@ -1,5 +1,5 @@
 import random
-from .chromosome_real import ChromosomeReal
+from genetic_algorithm.chromosome_real import ChromosomeReal
 
 
 class CrossoverReal:

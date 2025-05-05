@@ -1,27 +1,25 @@
-import random
+from genetic_algorithm.chromosome_real import ChromosomeReal
 
-class ChromosomeReal:
-    def __init__(self, num_of_variables, variables_ranges):
+class PopulationReal:
+    def __init__(self, num_variables, variable_ranges):
         """
-        num_of_variables: liczba zmiennych
-        variables_ranges: lista przedziałów [(min1, max1), (min2, max2), ...]
+        num_variables: liczba zmiennych (np. 3)
+        variable_ranges: lista przedziałów [(min, max), (min, max), ...]
         """
-        self.num_of_variables = num_of_variables
-        self.variables_ranges = variables_ranges
-        self.variables = []  # zmienne rzeczywiste
-        self.fitness = None  # wartość funkcji celu
+        self.num_variables = num_variables
+        self.variable_ranges = variable_ranges
+        self.individuals = []
 
-    def generate_chromosome(self):
-        self.variables = [
-            random.uniform(min_val, max_val)
-            for (min_val, max_val) in self.variables_ranges
-        ]
+    def create_initial_population(self, size):
+        """Tworzy początkową populację osobników rzeczywistych"""
+        self.individuals = []
+        for _ in range(size):
+            chromo = ChromosomeReal(self.num_variables, self.variable_ranges)
+            chromo.generate_chromosome()
+            self.individuals.append(chromo)
 
-    def decode_variables(self):
-        return self.variables
+    def evaluate(self, fitness_function):
+        """Ocena wszystkich osobników funkcją celu"""
+        for individual in self.individuals:
+            individual.fitness = fitness_function(individual.decode_variables())
 
-    def clone(self):
-        clone = ChromosomeReal(self.num_of_variables, self.variables_ranges)
-        clone.variables = self.variables.copy()
-        clone.fitness = self.fitness
-        return clone
