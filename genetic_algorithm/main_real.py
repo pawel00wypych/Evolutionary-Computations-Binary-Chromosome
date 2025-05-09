@@ -1,5 +1,4 @@
 import time
-from datetime import datetime
 from statistics import mean, stdev
 from genetic_algorithm.population_real import PopulationReal
 from genetic_algorithm.crossover_real import CrossoverReal
@@ -12,7 +11,6 @@ def run_real_genetic_algorithm(config):
     num_of_variables = config["num_of_variables"]
     mutation_probability = config["mutation_probability"]
     crossover_probability = config["crossover_probability"]
-    variables_ranges_list = config["variables_ranges_list"]
     expected_minimum = config["expected_minimum"]
     selection_method = config["selection_method"]
     selection_type = config["selection_type"]
@@ -29,7 +27,7 @@ def run_real_genetic_algorithm(config):
     }
 
     start_time = time.time()
-    population = PopulationReal(num_of_variables, variables_ranges_list, population_size)
+    population = PopulationReal(num_of_variables, population_size)
     population.evaluate(fitness_function)
 
     selection_map = {
@@ -39,16 +37,16 @@ def run_real_genetic_algorithm(config):
     }
 
     crossover_map = {
-        "arithmetical": CrossoverReal.arithmetical,
-        "linear": CrossoverReal.linear,
-        "alpha": CrossoverReal.alpha,
-        "alpha_beta": CrossoverReal.alpha_beta,
-        "average": CrossoverReal.average
+        "arithmetic": CrossoverReal.arithmetic_crossover,
+        "linear": CrossoverReal.linear_crossover,
+        "alpha": CrossoverReal.alpha_blend_crossover,
+        "alpha_beta": CrossoverReal.alpha_beta_blend_crossover,
+        "average": CrossoverReal.average_crossover
     }
 
     mutation_map = {
-        "uniform": MutationReal.uniform,
-        "gaussian": MutationReal.gaussian
+        "uniform": MutationReal.uniform_mutation,
+        "gaussian": MutationReal.gaussian_mutation
     }
 
     best_fitness = float("inf") if selection_type == "min" else float("-inf")

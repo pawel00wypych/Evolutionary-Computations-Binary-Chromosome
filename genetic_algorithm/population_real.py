@@ -1,25 +1,33 @@
 from genetic_algorithm.chromosome_real import ChromosomeReal
 
 class PopulationReal:
-    def __init__(self, num_variables, variable_ranges):
-        """
-        num_variables: liczba zmiennych (np. 3)
-        variable_ranges: lista przedziałów [(min, max), (min, max), ...]
-        """
+    def __init__(self, num_variables, precision, variables_ranges_list, population_size=100, individuals=None):
+        self.size = population_size
         self.num_variables = num_variables
-        self.variable_ranges = variable_ranges
-        self.individuals = []
-
-    def create_initial_population(self, size):
-        """Tworzy początkową populację osobników rzeczywistych"""
-        self.individuals = []
-        for _ in range(size):
-            chromo = ChromosomeReal(self.num_variables, self.variable_ranges)
-            chromo.generate_chromosome()
-            self.individuals.append(chromo)
+        self.variables_ranges_list = variables_ranges_list
+        self.precision = precision
+        if individuals is None:
+            self.individuals = []
+        else:
+            self.individuals = individuals
+        self.initialize()
+        
+    def initialize(self):
+        # inicjuje populację losowymi osobnikami
+        self.individuals = [
+            ChromosomeReal(self.num_variables, self.precision, self.variables_ranges_list)
+            for _ in range(self.size)
+        ]
+        
+        for individual in self.individuals:
+            individual.generate_chromosome()
 
     def evaluate(self, fitness_function):
-        """Ocena wszystkich osobników funkcją celu"""
+        # ocena populacji na podstawie funkcji fitness
         for individual in self.individuals:
-            individual.fitness = fitness_function(individual.decode_variables())
+            for individual in self.individuals:
+                individual.fitness = fitness_function(individual.decode_variables())
 
+    def get_population_size(self):
+        # zwraca rozmiar populacji
+        return len(self.individuals)

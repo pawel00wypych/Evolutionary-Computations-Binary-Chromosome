@@ -179,7 +179,6 @@ class GeneticApp(tk.Tk):
                 "fitness_function": fitness,
                 "expected_minimum": expected,
                 "num_of_variables": num_vars,
-                "variables_ranges_list": ranges,
                 "precision": precision,
                 "mutation_probability": mutation_p,
                 "crossover_probability": crossover_p,
