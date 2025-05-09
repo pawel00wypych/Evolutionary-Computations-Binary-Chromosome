@@ -18,6 +18,7 @@ class MutationReal:
                 if random.random() < self.mutation_probability:
                     min_val, max_val = self.variable_ranges[i]
                     new_value = random.uniform(min_val, max_val)
+                    new_value = max(min(new_value, max_val), min_val)
                     individual.mutate_gene(i, new_value)
         return self.individuals
 
@@ -32,7 +33,6 @@ class MutationReal:
                     current_value = individual.variables[i]
                     min_val, max_val = self.variable_ranges[i]
                     mutated_value = current_value + random.gauss(0, sigma)
-                    # Przytnij do zakresu
                     mutated_value = max(min(mutated_value, max_val), min_val)
                     individual.mutate_gene(i, mutated_value)
         return self.individuals
