@@ -12,7 +12,7 @@ class MutationReal:
             for i in range(individual.num_of_variables):
                 if random.random() < self.mutation_probability:
                     # wybieramy nową wartość zmiennej z zakresu
-                    min_val, max_val = individual.variables_ranges[i]
+                    min_val, max_val = individual.variables_ranges_list[i]
                     new_value = random.uniform(min_val, max_val)
                     # przycinanie do zakresu
                     new_value = max(min(new_value, max_val), min_val)
@@ -27,7 +27,7 @@ class MutationReal:
                 if random.random() < self.mutation_probability:
                     # bieżąca wartość zmiennej
                     current_value = individual.variables[i]
-                    min_val, max_val = individual.variables_ranges[i]
+                    min_val, max_val = individual.variables_ranges_list[i]
                     # szum
                     mutated_value = current_value + random.gauss(0, sigma)
                     # przycinanie do zakresu

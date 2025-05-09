@@ -21,20 +21,14 @@ class GeneticApp(tk.Tk):
             self.function_box["values"] = ["Hypersphere", "Hybrid CEC 2014 (F1)", "Rana", "Composition 6"]
             self.crossover_box["values"] = ["single", "two", "granular", "uniform"]
             self.mutation_box["values"] = ["single", "two", "edge"]
-            self.inversion_prob_label.pack()
-            self.inversion_prob_entry.pack()
-            self.inversion_level_label.pack()
-            self.inversion_level_entry.pack()
+
             self.inversion_prob_entry.config(state="normal")
             self.inversion_level_entry.config(state="normal")
         else:
             self.function_box["values"] = ["Hypersphere", "Hybrid CEC 2014 (F1)", "Rana", "Composition 6"]
-            self.crossover_box["values"] = ["arithmetic", "blend", "heuristic"]
+            self.crossover_box["values"] = ["arithmetic", "linear", "alpha", "alpha_beta", "average"]
             self.mutation_box["values"] = ["gaussian", "uniform"]
-            self.inversion_prob_label.pack_forget()
-            self.inversion_prob_entry.pack_forget()
-            self.inversion_level_label.pack_forget()
-            self.inversion_level_entry.pack_forget()
+
             self.inversion_prob_entry.config(state="disabled")
             self.inversion_level_entry.config(state="disabled")
 
@@ -69,7 +63,7 @@ class GeneticApp(tk.Tk):
         self.population_entry = field("Population size:")
         self.epochs_entry = field("Epochs:")
         self.crossover_prob_entry = field("Crossover probability (0-1):")
-        self.mutation_prob_entry = field("Mutation probability (0-1):")
+        self.mutation_prob_entry = field("Mutation probability (0-1):")      
         self.inversion_prob_entry = field("Inversion probability (0-1):")
         self.inversion_level_entry = field("Inversion level (0-1):")
 
@@ -89,11 +83,6 @@ class GeneticApp(tk.Tk):
         # Na początku przypisujemy puste listy, wartości będą ustawione w `update_representation()`
         self.crossover_box = combo("Crossover method:", "crossover_var", [])
         self.mutation_box = combo("Mutation method:", "mutation_var", [])
-
-        self.inversion_prob_label = ttk.Label(self, text="Inversion probability (0-1):")
-        self.inversion_prob_entry = ttk.Entry(self)
-        self.inversion_level_label = ttk.Label(self, text="Inversion level (0-1):")
-        self.inversion_level_entry = ttk.Entry(self)
 
         ttk.Button(self, text="Start", command=self.run_algorithm).pack(pady=10)
 
@@ -130,49 +119,62 @@ class GeneticApp(tk.Tk):
             mutation = self.mutation_var.get()
             print(f"Mutation method: {mutation}")  # Wypiszemy metodę mutacj
             stop_criteria = int(self.stop_criteria_var.get())
+
+            # nie używamy inwersji dla rzeczywistej
             if repr_type == "binary":
                 try:
-                    inversion_p = float(self.inversion_prob_entry.get())  # Get inversion probability
+                    inversion_p = float(self.inversion_prob_entry.get())
                     print(f"Inversion probability: {inversion_p}")
                 except ValueError:
-                    inversion_p = 0.0  # Default if invalid value is entered
+                    inversion_p = 0.0 
                     print("Invalid inversion probability value, defaulting to 0.0")
                 
                 try:
-                    inversion_level = float(self.inversion_level_entry.get())  # Get inversion level
+                    inversion_level = float(self.inversion_level_entry.get())
                     print(f"Inversion level: {inversion_level}")
                 except ValueError:
-                    inversion_level = 0.0  # Default if invalid value is entered
+                    inversion_level = 0.0 
                     print("Invalid inversion level value, defaulting to 0.0")
             else:
-                # If the representation is not binary, set inversion values to 0
                 inversion_p = 0.0
                 inversion_level = 0.0
                 print("Inversion probability and level are disabled for real representation.")
 
-            # --- Function setup ---
+            # funkcje
             if fun_name == "Hypersphere":
                 fitness = evaluation_functions.hypersphere_fitness
                 if selection_type == "min":
                     expected = evaluation_functions.get_hypersphere_minimum()
                 else:
                     expected = evaluation_functions.get_hypersphere_maximum()
-                ranges = [(-5, 5)]
+                if repr_type == "real":
+                    ranges = [(-5, 5)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-5, 5)]
             elif fun_name == "Hybrid CEC 2014 (F1)":
                 fitness = evaluation_functions.hybrid_fitness
                 expected = evaluation_functions.get_cec_hybrid_minimum()
-                ranges = [(-100, 100)]
+                if repr_type == "real":
+                    ranges = [(-100, 100)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-100, 100)]
             elif fun_name == "Rana":
                 fitness = evaluation_functions.rana_fitness
                 if selection_type == "min":
                     expected = evaluation_functions.get_rana_minimum()
                 else:
                     expected = evaluation_functions.get_rana_maximum()
-                ranges = [(-512, 512)]
+                if repr_type == "real":
+                    ranges = [(-512, 512)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-512, 512)]
             elif fun_name == "Composition 6":
                 fitness = evaluation_functions.composition_6_fitness
                 expected = evaluation_functions.get_cec_composition_6_minimum()
-                ranges = [(-100, 100)]
+                if repr_type == "real":
+                    ranges = [(-100, 100)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-100, 100)]
 
             # --- Create config dict ---
             config = {
@@ -180,6 +182,7 @@ class GeneticApp(tk.Tk):
                 "expected_minimum": expected,
                 "num_of_variables": num_vars,
                 "precision": precision,
+                "variables_ranges_list": ranges,
                 "mutation_probability": mutation_p,
                 "crossover_probability": crossover_p,
                 "inversion_probability": inversion_p,

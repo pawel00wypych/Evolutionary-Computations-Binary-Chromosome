@@ -10,10 +10,12 @@ def run_real_genetic_algorithm(config):
     fitness_function = config["fitness_function"]
     num_of_variables = config["num_of_variables"]
     mutation_probability = config["mutation_probability"]
+    precision = config["precision"]
+    variables_ranges_list = config["variables_ranges_list"]
     crossover_probability = config["crossover_probability"]
     expected_minimum = config["expected_minimum"]
     selection_method = config["selection_method"]
-    selection_type = config["selection_type"]
+    selection_type = config["selection_type"] # min or max
     crossover_method = config["crossover_method"]
     mutation_method = config["mutation_method"]
     epochs = config["epochs"]
@@ -27,7 +29,7 @@ def run_real_genetic_algorithm(config):
     }
 
     start_time = time.time()
-    population = PopulationReal(num_of_variables, population_size)
+    population = PopulationReal(num_of_variables, precision, variables_ranges_list, population_size)
     population.evaluate(fitness_function)
 
     selection_map = {
@@ -80,6 +82,8 @@ def run_real_genetic_algorithm(config):
         fitness_values = [ind.fitness for ind in population.individuals]
         avg_fitness = mean(fitness_values)
         std_dev = stdev(fitness_values) if len(fitness_values) > 1 else 0
+  
+        print(f"Epoch {epoch}, Best fitness: {best_fitness}")
 
         history["best_fitness"].append(best_fitness)
         history["avg_fitness"].append(avg_fitness)

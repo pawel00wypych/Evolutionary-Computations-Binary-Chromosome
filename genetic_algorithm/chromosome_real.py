@@ -24,16 +24,14 @@ class ChromosomeReal:
 
     def decode_variables(self):
         # zwraca zmienne rzeczywiste
-        return self.variables
+        return self.variables[:]
+    
+    def decoded_variables(self):
+        return self.decode_variables()
 
-    def mutate_gene(self, gene_idx, mutation_range):
-        # modyfikacja jednej zmiennej
+    def mutate_gene(self, gene_idx, value):
         if 0 <= gene_idx < len(self.variables):
-            min_val, max_val = self.variables_ranges_list[gene_idx]
-            mutation_value = random.uniform(min_val - mutation_range, max_val + mutation_range)
-            if self.precision is not None:
-                mutation_value = round(mutation_value, self.precision)  # zastosowanie precyzji
-            self.variables[gene_idx] = mutation_value
+            self.variables[gene_idx] = value
 
     def clone(self):
         # kopia chromosomu

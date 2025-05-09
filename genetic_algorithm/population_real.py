@@ -1,7 +1,7 @@
 from genetic_algorithm.chromosome_real import ChromosomeReal
 
 class PopulationReal:
-    def __init__(self, num_variables, precision, variables_ranges_list, population_size=100, individuals=None):
+    def __init__(self, num_variables, precision, variables_ranges_list, population_size, individuals=None):
         self.size = population_size
         self.num_variables = num_variables
         self.variables_ranges_list = variables_ranges_list
@@ -11,6 +11,9 @@ class PopulationReal:
         else:
             self.individuals = individuals
         self.initialize()
+
+        print("RANGES:", self.variables_ranges_list)
+        print("NUM VARIABLES:", self.num_variables)
         
     def initialize(self):
         # inicjuje populację losowymi osobnikami
