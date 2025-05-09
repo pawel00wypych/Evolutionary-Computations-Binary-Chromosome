@@ -1,24 +1,57 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from matplotlib import pyplot as plt
+import numpy as np
 from genetic_algorithm import evaluation_functions
 from .main import run_genetic_algorithm
-import numpy as np
+from .main_real import run_real_genetic_algorithm
 
 class GeneticApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Genetic Algorithm GUI")
-        self.geometry("500x620")
+        self.geometry("500x700")
         self.create_widgets()
+        self.update_representation()
+
+    def update_representation(self):
+        repr_type = self.representation_var.get()
+
+        if repr_type == "binary":
+            self.function_box["values"] = ["Hypersphere", "Hybrid CEC 2014 (F1)", "Rana", "Composition 6"]
+            self.crossover_box["values"] = ["single", "two", "granular", "uniform"]
+            self.mutation_box["values"] = ["single", "two", "edge"]
+
+            self.inversion_prob_entry.config(state="normal")
+            self.inversion_level_entry.config(state="normal")
+
+            self.configure(bg="#bad5e6")
+        else:
+            self.function_box["values"] = ["Hypersphere", "Hybrid CEC 2014 (F1)", "Rana", "Composition 6"]
+            self.crossover_box["values"] = ["arithmetic", "linear", "alpha", "alpha_beta", "average"]
+            self.mutation_box["values"] = ["gaussian", "uniform"]
+
+            self.inversion_prob_entry.config(state="disabled")
+            self.inversion_level_entry.config(state="disabled")
+            
+            self.configure(bg="#bcdbbf")
+
+        # Teraz możemy ustawić domyślną wartość
+        self.function_box.current(0)
+        self.crossover_box.current(0)
+        self.mutation_box.current(0)
 
     def create_widgets(self):
-        # --- FUNCTION SELECTION ---
+        # reprezentacja
+        ttk.Label(self, text="Representation:").pack(pady=(10, 0))
+        self.representation_var = tk.StringVar(value="binary")
+        ttk.Radiobutton(self, text="Binary", variable=self.representation_var, value="binary", command=self.update_representation).pack()
+        ttk.Radiobutton(self, text="Real", variable=self.representation_var, value="real", command=self.update_representation).pack()
+        
+        # funkcja
         ttk.Label(self, text="Function:").pack(pady=(10, 0))
         self.function_var = tk.StringVar()
         self.function_box = ttk.Combobox(self, textvariable=self.function_var, state="readonly")
-        self.function_box["values"] = ["Hypersphere", "Hybrid CEC 2014 (F1)", "Rana", "Composition 6"]
-        self.function_box.current(0)
         self.function_box.pack()
 
         # --- BASIC CONFIG ---
@@ -34,35 +67,39 @@ class GeneticApp(tk.Tk):
         self.population_entry = field("Population size:")
         self.epochs_entry = field("Epochs:")
         self.crossover_prob_entry = field("Crossover probability (0-1):")
-        self.mutation_prob_entry = field("Mutation probability (0-1):")
+        self.mutation_prob_entry = field("Mutation probability (0-1):")      
         self.inversion_prob_entry = field("Inversion probability (0-1):")
-        self.inversion_level_entry = field("inversion_level (0-1):")
+        self.inversion_level_entry = field("Inversion level (0-1):")
 
         # --- SELECTION METHODS ---
-        def combo(label, values):
+        def combo(label, var_name, values):
             ttk.Label(self, text=label).pack()
             var = tk.StringVar()
             box = ttk.Combobox(self, textvariable=var, state="readonly")
             box["values"] = values
-            box.current(0)
             box.pack()
-            return var
+            setattr(self, var_name, var)
+            return box
 
-        self.selection_var = combo("Selection method:", ["tournament", "roulette", "best"])
-        self.selection_type_var = combo("Selection method:", ["min", "max"])
-        self.crossover_var = combo("Crossover method:", ["single", "two", "granular", "uniform"])
-        self.mutation_var = combo("Mutation method:", ["single", "two", "edge"])
+        self.selection_var = combo("Selection method:", "selection_var", ["tournament", "roulette", "best"])
+        self.selection_type_var = combo("Selection type:", "selection_type_var", ["min", "max"])
 
-        # --- START BUTTON ---
+        # Na początku przypisujemy puste listy, wartości będą ustawione w `update_representation()`
+        self.crossover_box = combo("Crossover method:", "crossover_var", [])
+        self.mutation_box = combo("Mutation method:", "mutation_var", [])
+
         ttk.Button(self, text="Start", command=self.run_algorithm).pack(pady=10)
 
-        # --- RESULT DISPLAY ---
         self.result_text = tk.Text(self, height=6, wrap="word")
         self.result_text.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        # Początkowe wywołanie update_representation, aby zaktualizować comboboxy po ich utworzeniu
+        self.update_representation()
 
     def run_algorithm(self):
         try:
             # --- Extract GUI values ---
+            repr_type = self.representation_var.get()
             fun_name = self.function_var.get()
             num_vars = int(self.variables_entry.get())
             precision = int(self.precision_entry.get())
@@ -70,45 +107,70 @@ class GeneticApp(tk.Tk):
             epochs = int(self.epochs_entry.get())
             crossover_p = float(self.crossover_prob_entry.get())
             mutation_p = float(self.mutation_prob_entry.get())
-            inversion_p = float(self.inversion_prob_entry.get())
-            inversion_level = float(self.inversion_level_entry.get())
             selection = self.selection_var.get()
             selection_type = self.selection_type_var.get()
             crossover = self.crossover_var.get()
             mutation = self.mutation_var.get()
             stop_criteria = int(self.stop_criteria_var.get())
 
-            # --- Function setup ---
+            # nie używamy inwersji dla rzeczywistej
+            if repr_type == "binary":
+                try:
+                    inversion_p = float(self.inversion_prob_entry.get())
+                except ValueError:
+                    inversion_p = 0.0 
+                
+                try:
+                    inversion_level = float(self.inversion_level_entry.get())
+                except ValueError:
+                    inversion_level = 0.0 
+            else:
+                inversion_p = 0.0
+                inversion_level = 0.0
+
+            # funkcje
             if fun_name == "Hypersphere":
                 fitness = evaluation_functions.hypersphere_fitness
                 if selection_type == "min":
                     expected = evaluation_functions.get_hypersphere_minimum()
                 else:
                     expected = evaluation_functions.get_hypersphere_maximum()
-                ranges = [(-5, 5)]
+                if repr_type == "real":
+                    ranges = [(-5, 5)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-5, 5)]
             elif fun_name == "Hybrid CEC 2014 (F1)":
                 fitness = evaluation_functions.hybrid_fitness
                 expected = evaluation_functions.get_cec_hybrid_minimum()
-                ranges = [(-100, 100)]
+                if repr_type == "real":
+                    ranges = [(-100, 100)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-100, 100)]
             elif fun_name == "Rana":
                 fitness = evaluation_functions.rana_fitness
                 if selection_type == "min":
                     expected = evaluation_functions.get_rana_minimum()
                 else:
                     expected = evaluation_functions.get_rana_maximum()
-                ranges = [(-512, 512)]
+                if repr_type == "real":
+                    ranges = [(-512, 512)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-512, 512)]
             elif fun_name == "Composition 6":
                 fitness = evaluation_functions.composition_6_fitness
                 expected = evaluation_functions.get_cec_composition_6_minimum()
-                ranges = [(-100, 100)]
+                if repr_type == "real":
+                    ranges = [(-100, 100)] * num_vars  # lista zakresów dla każdej zmiennej
+                else:
+                    ranges = [(-100, 100)]
 
             # --- Create config dict ---
             config = {
                 "fitness_function": fitness,
                 "expected_minimum": expected,
                 "num_of_variables": num_vars,
-                "variables_ranges_list": ranges,
                 "precision": precision,
+                "variables_ranges_list": ranges,
                 "mutation_probability": mutation_p,
                 "crossover_probability": crossover_p,
                 "inversion_probability": inversion_p,
@@ -130,7 +192,11 @@ class GeneticApp(tk.Tk):
             best_history = None
 
             for i in range(10):
-                result = run_genetic_algorithm(config)
+                result = (
+                    run_genetic_algorithm(config)
+                    if repr_type == "binary"
+                    else run_real_genetic_algorithm(config)
+                )
                 results.append(result['best_fitness'])
                 execution_times.append(result['execution_time'])
 

@@ -17,6 +17,12 @@ Implementation of a genetic algorithm to solve an optimization problem (maximiza
 The implementation allows selecting any number of variables in the configuration (i.e., the ability to test the algorithm for functions with, 
 for example, 5, 10, 20, or 27 variables).
 
+## Project 2 - Real chromosome
+This project extends the classical genetic algorithm by implementing a real chromosome representation.
+Real chromosome use floating-point numbers to represent the solutions in the search space.
+This approach is particularly useful for problems involving continuous optimization.
+
+## Project 3 - 
 
 
 

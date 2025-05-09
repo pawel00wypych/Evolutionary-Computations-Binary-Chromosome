@@ -1,36 +1,51 @@
 import random
 
 class ChromosomeReal:
-    def __init__(self, num_of_variables, variables_ranges):
-        """
-        num_of_variables: ile zmiennych (np. 3 dla x, y, z)
-        variables_ranges: lista krotek [(min1, max1), (min2, max2), ...]
-        """
+    def __init__(self, num_of_variables, precision, variables_ranges_list, fitness=0):
+        # definiuje ilość zmiennych i krotek
         self.num_of_variables = num_of_variables
-        self.variables_ranges = variables_ranges  # [(min, max), (min, max), ...]
+        self.variables_ranges_list = variables_ranges_list  # [(min, max), (min, max), ...]
         self.variables = []  # lista zmiennych rzeczywistych
-        self.fitness = None  # wartość przystosowania (fitness)
+        self.fitness = fitness  # wartość przystosowania (fitness)
+        self.precision = precision
+
+    def random_in_range(self, min_val, max_val):
+            value = random.uniform(min_val, max_val)
+            if self.precision is not None:
+                return round(value, self.precision)  # zastosowanie precyzji
+            return value
 
     def generate_chromosome(self):
-        """Losowo generuje zmienne rzeczywiste w zadanych przedziałach"""
+        # losowo generuje zmienne w zadanych przedziałach
         self.variables = [
             random.uniform(min_val, max_val)
-            for (min_val, max_val) in self.variables_ranges
+            for (min_val, max_val) in self.variables_ranges_list
         ]
 
     def decode_variables(self):
-        """Zwraca zmienne rzeczywiste"""
-        return self.variables
+        # zwraca zmienne rzeczywiste
+        return self.variables[:]
+    
+    def decoded_variables(self):
+        return self.decode_variables()
 
-    def mutate_gene(self, gene_idx, new_value):
-        """Modyfikacja jednej zmiennej na nową wartość (do mutacji rzeczywistej)"""
+    def mutate_gene(self, gene_idx, value):
         if 0 <= gene_idx < len(self.variables):
-            self.variables[gene_idx] = new_value
+            self.variables[gene_idx] = value
 
     def clone(self):
-        """Tworzy głęboką kopię chromosomu"""
-        clone = ChromosomeReal(self.num_of_variables, self.variables_ranges)
+        # kopia chromosomu
+        clone = ChromosomeReal(self.num_of_variables, self.precision, self.variables_ranges_list, self.fitness)
         clone.variables = self.variables.copy()
         clone.fitness = self.fitness
         return clone
+    
+    def evaluate_fitness(self, fitness_function):
+        # wartość przystosowania (fitness) na podstawie funkcji przystosowania
+        if self.fitness is None:
+            self.fitness = fitness_function(self.decode_variables())
+        return self.fitness
+
+    def __repr__(self):
+        return f"ChromosomeReal(variables={self.variables}, fitness={self.fitness})"
 
