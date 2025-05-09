@@ -1,0 +1,10 @@
+fitness_function:rana_fitness
+num_of_variables:10
+mutation_probability:1.0
+crossover_probability:1.0
+inversion_probability:1.0
+variables_ranges_list:[(-512, 512)]
+precision:3
+expected_minimum:(-511.73288188661934, [-488.632577, 512])
+db_name:rana_fitness.db
+Best solution: [440.4423145697733, 410.9520520706674, 333.6951424552369, -497.47459552249484, 179.33562024652508, 265.94898409746565, 508.6728483894809, 354.7664516129032, -209.4430708342274, 336.60237179028684], fitness value: -2090.493955579197  best expected solution: (-511.73288188661934, [-488.632577, 512])
