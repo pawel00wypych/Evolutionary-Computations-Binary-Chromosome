@@ -12,7 +12,7 @@ class GeneticApp(tk.Tk):
         self.title("Genetic Algorithm GUI")
         self.geometry("500x700")
         self.create_widgets()
-        self.update_representation()  # Zaktualizuj reprezentację po stworzeniu widgetów
+        self.update_representation()
 
     def update_representation(self):
         repr_type = self.representation_var.get()
@@ -24,6 +24,8 @@ class GeneticApp(tk.Tk):
 
             self.inversion_prob_entry.config(state="normal")
             self.inversion_level_entry.config(state="normal")
+
+            self.configure(bg="#bad5e6")
         else:
             self.function_box["values"] = ["Hypersphere", "Hybrid CEC 2014 (F1)", "Rana", "Composition 6"]
             self.crossover_box["values"] = ["arithmetic", "linear", "alpha", "alpha_beta", "average"]
@@ -31,6 +33,8 @@ class GeneticApp(tk.Tk):
 
             self.inversion_prob_entry.config(state="disabled")
             self.inversion_level_entry.config(state="disabled")
+            
+            self.configure(bg="#bcdbbf")
 
         # Teraz możemy ustawić domyślną wartość
         self.function_box.current(0)
@@ -97,48 +101,32 @@ class GeneticApp(tk.Tk):
             # --- Extract GUI values ---
             repr_type = self.representation_var.get()
             fun_name = self.function_var.get()
-            print(f"Function selected: {fun_name}")
             num_vars = int(self.variables_entry.get())
-            print(f"Number of variables: {num_vars}")  # Wypiszemy liczbę zmiennych
             precision = int(self.precision_entry.get())
-            print(f"Precision: {precision}")  # Wypiszemy dokładność
             population = int(self.population_entry.get())
-            print(f"Population size: {population}")  # Wypiszemy rozmiar populacji
             epochs = int(self.epochs_entry.get())
-            print(f"Epochs: {epochs}")  # Wypiszemy liczbę epok
             crossover_p = float(self.crossover_prob_entry.get())
-            print(f"Crossover probability: {crossover_p}")  # Wypiszemy prawdopodobieństwo krzyżowania
             mutation_p = float(self.mutation_prob_entry.get())
-            print(f"Mutation probability: {mutation_p}")  # Wypiszemy prawdopodobieństwo mutacji
             selection = self.selection_var.get()
-            print(f"Selection method: {selection}")  # Wypiszemy metodę selekcj
             selection_type = self.selection_type_var.get()
-            print(f"Selection type: {selection_type}")  # Wypiszemy typ selekcji
             crossover = self.crossover_var.get()
-            print(f"Crossover method: {crossover}")  # Wypiszemy metodę krzyżowania
             mutation = self.mutation_var.get()
-            print(f"Mutation method: {mutation}")  # Wypiszemy metodę mutacj
             stop_criteria = int(self.stop_criteria_var.get())
 
             # nie używamy inwersji dla rzeczywistej
             if repr_type == "binary":
                 try:
                     inversion_p = float(self.inversion_prob_entry.get())
-                    print(f"Inversion probability: {inversion_p}")
                 except ValueError:
                     inversion_p = 0.0 
-                    print("Invalid inversion probability value, defaulting to 0.0")
                 
                 try:
                     inversion_level = float(self.inversion_level_entry.get())
-                    print(f"Inversion level: {inversion_level}")
                 except ValueError:
                     inversion_level = 0.0 
-                    print("Invalid inversion level value, defaulting to 0.0")
             else:
                 inversion_p = 0.0
                 inversion_level = 0.0
-                print("Inversion probability and level are disabled for real representation.")
 
             # funkcje
             if fun_name == "Hypersphere":
