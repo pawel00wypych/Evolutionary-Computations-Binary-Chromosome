@@ -1,85 +1,103 @@
-import os
-import csv
 import time
 from datetime import datetime
-
-from genetic_algorithm.chromosome_real import ChromosomeReal
+from statistics import mean, stdev
 from genetic_algorithm.population_real import PopulationReal
 from genetic_algorithm.crossover_real import CrossoverReal
 from genetic_algorithm.mutation_real import MutationReal
-from genetic_algorithm.evaluation_functions import hypersphere_fitness
+from genetic_algorithm.elitism import Elitism
+from genetic_algorithm.selection import Selection
 
-# -------------------- PARAMETRY --------------------
+def run_real_genetic_algorithm(config):
+    fitness_function = config["fitness_function"]
+    num_of_variables = config["num_of_variables"]
+    mutation_probability = config["mutation_probability"]
+    crossover_probability = config["crossover_probability"]
+    variables_ranges_list = config["variables_ranges_list"]
+    expected_minimum = config["expected_minimum"]
+    selection_method = config["selection_method"]
+    selection_type = config["selection_type"]
+    crossover_method = config["crossover_method"]
+    mutation_method = config["mutation_method"]
+    epochs = config["epochs"]
+    population_size = config["population_size"]
+    stop_criteria = config["stop_criteria"]
 
-POPULATION_SIZE = 100
-EPOCHS = 100
-MUTATION_PROB = 0.1
-CROSSOVER_PROB = 0.7
-VARIABLE_RANGES = [(-5, 5)] * 2  # 2 zmienne w przedziale [-5, 5]
-NUM_OF_VARIABLES = len(VARIABLE_RANGES)
+    history = {
+        "best_fitness": [],
+        "avg_fitness": [],
+        "std_fitness": [],
+    }
 
-# -------------------- INICJALIZACJA --------------------
+    start_time = time.time()
+    population = PopulationReal(num_of_variables, variables_ranges_list, population_size)
+    population.evaluate(fitness_function)
 
-population = PopulationReal(NUM_OF_VARIABLES, VARIABLE_RANGES)
-population.create_initial_population(POPULATION_SIZE)
-population.evaluate(hypersphere_fitness)
+    selection_map = {
+        "tournament": Selection.tournament_selection,
+        "roulette": Selection.roulette_selection,
+        "best": Selection.best_selection
+    }
 
-# -------------------- STATYSTYKI --------------------
+    crossover_map = {
+        "arithmetical": CrossoverReal.arithmetical,
+        "linear": CrossoverReal.linear,
+        "alpha": CrossoverReal.alpha,
+        "alpha_beta": CrossoverReal.alpha_beta,
+        "average": CrossoverReal.average
+    }
 
-best_fitness_per_epoch = []
-avg_fitness_per_epoch = []
-std_fitness_per_epoch = []
+    mutation_map = {
+        "uniform": MutationReal.uniform,
+        "gaussian": MutationReal.gaussian
+    }
 
-# -------------------- EWOLUCJA --------------------
+    best_fitness = float("inf") if selection_type == "min" else float("-inf")
+    no_improvement_counter = 0
 
-start_time = time.time()
+    for epoch in range(epochs):
+        elitism_operator = Elitism(population.individuals)
+        elitism_operator.choose_the_best_individuals()
+        elites = elitism_operator.get_elite_list()
 
-for epoch in range(EPOCHS):
-    # SELEKCJA turniejowa — bierzemy najlepszych (tu: sortujemy ręcznie)
-    population.individuals.sort(key=lambda ind: ind.fitness)
-    selected = population.individuals[:POPULATION_SIZE]
+        crossover_operator = CrossoverReal(population.individuals, crossover_probability, elitism_operator.number_of_elites)
+        offspring = crossover_map[crossover_method](crossover_operator)
 
-    # ELITARNE: zachowaj najlepszego
-    elite = selected[0].clone()
+        mutation_operator = MutationReal(offspring, mutation_probability)
+        mutated_offspring = mutation_map[mutation_method](mutation_operator)
 
-    # KRZYŻOWANIE
-    crossover = CrossoverReal(selected, CROSSOVER_PROB)
-    offspring = crossover.arithmetic_crossover()
+        new_population = elites + mutated_offspring
+        population.individuals = new_population
+        population.evaluate(fitness_function)
 
-    # MUTACJA
-    mutation = MutationReal(offspring, MUTATION_PROB, VARIABLE_RANGES)
-    mutated = mutation.gaussian_mutation(sigma=0.5)
+        selected = selection_map[selection_method](population, selection_type=selection_type, num_selected=population_size)
+        new_best_fitness = selected[0].fitness
 
-    # NOWA POPULACJA
-    population.individuals = mutated
-    population.individuals[0] = elite  # zachowujemy najlepszego
+        if (selection_type == "min" and new_best_fitness < best_fitness) or \
+           (selection_type == "max" and new_best_fitness > best_fitness):
+            best_fitness = new_best_fitness
+            no_improvement_counter = 0
+        else:
+            no_improvement_counter += 1
 
-    # OCENA
-    population.evaluate(hypersphere_fitness)
+        fitness_values = [ind.fitness for ind in population.individuals]
+        avg_fitness = mean(fitness_values)
+        std_dev = stdev(fitness_values) if len(fitness_values) > 1 else 0
 
-    # STATYSTYKI
-    fitness_vals = [ind.fitness for ind in population.individuals]
-    best = min(fitness_vals)
-    avg = sum(fitness_vals) / len(fitness_vals)
-    std = (sum((x - avg)**2 for x in fitness_vals) / len(fitness_vals)) ** 0.5
+        history["best_fitness"].append(best_fitness)
+        history["avg_fitness"].append(avg_fitness)
+        history["std_fitness"].append(std_dev)
 
-    best_fitness_per_epoch.append(best)
-    avg_fitness_per_epoch.append(avg)
-    std_fitness_per_epoch.append(std)
+        if no_improvement_counter >= stop_criteria:
+            print(f"Algorithm stopped – no improvement for {stop_criteria} epochs")
+            break
 
-    print(f"Epoka {epoch+1}/{EPOCHS} | Best: {best:.6f} | Avg: {avg:.6f} | Std: {std:.6f}")
+    end_time = time.time()
+    execution_time = end_time - start_time
 
-end_time = time.time()
-print(f"\nCzas działania: {end_time - start_time:.2f} sekundy")
-
-# -------------------- ZAPIS DO CSV --------------------
-
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-csv_file = f"results_real_{timestamp}.csv"
-with open(csv_file, mode='w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(["Epoch", "BestFitness", "AvgFitness", "StdDev"])
-    for i in range(EPOCHS):
-        writer.writerow([i+1, best_fitness_per_epoch[i], avg_fitness_per_epoch[i], std_fitness_per_epoch[i]])
-
-print(f"Wyniki zapisane do pliku: {csv_file}")
+    return {
+        "best_solution": selected[0].decoded_variables,
+        "best_fitness": best_fitness,
+        "expected_minimum": expected_minimum,
+        "execution_time": execution_time,
+        "history": history
+    }
