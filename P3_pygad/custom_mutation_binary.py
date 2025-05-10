@@ -16,6 +16,6 @@ def mutation_two_point(offspring, ga_instance):
 
 def mutation_edge(offspring, ga_instance):
     for i in range(offspring.shape[0]):
-        offspring[i, 0] = 1 - offspring[i, 0]           # pierwszy bit
-        offspring[i, -1] = 1 - offspring[i, -1]         # ostatni bit
+        offspring[i, 0] = 1 - offspring[i, 0]
+        offspring[i, -1] = 1 - offspring[i, -1]
     return offspring

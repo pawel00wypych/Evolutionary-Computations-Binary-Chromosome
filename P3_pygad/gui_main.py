@@ -5,17 +5,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from benchmark_setup import evaluate_fitness, get_bounds, get_dimensions
-from custom_crossover import crossover_average_func
-from custom_mutation import mutation_gaussian_func
-from custom_crossover_binary import crossover_two_point
-from custom_mutation_binary import mutation_edge
+from custom_crossover import crossover_average_func, crossover_arithmetic_func, crossover_linear_func, crossover_alpha_func, crossover_alpha_beta_func
+from custom_mutation import mutation_gaussian_func, mutation_uniform_func
+from custom_crossover_binary import crossover_single_point, crossover_two_point
+from custom_mutation_binary import mutation_single_point, mutation_two_point, mutation_edge
+import benchmark_setup
 
 class GeneticApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Genetic Algorithm GUI")
-        self.geometry("500x400")
+        self.geometry("550x600")
         self.create_widgets()
 
     def create_widgets(self):
@@ -23,6 +23,21 @@ class GeneticApp(tk.Tk):
         tk.Label(self, text="Reprezentacja:").pack()
         self.representation_var = tk.StringVar(value="real")
         ttk.Combobox(self, textvariable=self.representation_var, values=["real", "binary"]).pack()
+
+        # Funkcja celu
+        tk.Label(self, text="Funkcja celu:").pack()
+        self.function_var = tk.StringVar(value="hyperellipsoid")
+        ttk.Combobox(self, textvariable=self.function_var, values=["hyperellipsoid", "cec_f3"]).pack()
+
+        # Krzyżowanie
+        tk.Label(self, text="Krzyżowanie:").pack()
+        self.crossover_var = tk.StringVar(value="average")
+        ttk.Combobox(self, textvariable=self.crossover_var, values=["average", "arithmetic", "linear", "alpha", "alpha_beta", "single_point", "two_point"]).pack()
+
+        # Mutacja
+        tk.Label(self, text="Mutacja:").pack()
+        self.mutation_var = tk.StringVar(value="gaussian")
+        ttk.Combobox(self, textvariable=self.mutation_var, values=["gaussian", "uniform", "single_point", "two_point", "edge"]).pack()
 
         # Generacje
         tk.Label(self, text="Liczba generacji:").pack()
@@ -57,20 +72,56 @@ class GeneticApp(tk.Tk):
         elitism = int(self.elite_entry.get())
         mutation_percent = int(self.mut_entry.get())
         representation = self.representation_var.get()
+        selected_function = self.function_var.get()
+        selected_crossover = self.crossover_var.get()
+        selected_mutation = self.mutation_var.get()
+
+        # ustawienie funkcji benchmarkowej
+        benchmark_setup.set_function(selected_function)
+        self.evaluate_fitness = benchmark_setup.evaluate_fitness
+        self.bounds = benchmark_setup.get_bounds()
+        self.num_variables = benchmark_setup.get_dimensions()
+
+        # rozpakowanie zakresu
+        try:
+            lower, upper = self.bounds[0]
+        except Exception:
+            lower, upper = -100, 100
 
         if representation == "real":
-            self.run_real(generations, population, elitism, mutation_percent)
+            crossover_map = {
+                "average": crossover_average_func,
+                "arithmetic": crossover_arithmetic_func,
+                "linear": crossover_linear_func,
+                "alpha": crossover_alpha_func,
+                "alpha_beta": crossover_alpha_beta_func
+            }
+            mutation_map = {
+                "gaussian": mutation_gaussian_func,
+                "uniform": mutation_uniform_func
+            }
+            crossover_func = crossover_map.get(selected_crossover, crossover_average_func)
+            mutation_func = mutation_map.get(selected_mutation, mutation_gaussian_func)
+            self.run_real(generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper)
         else:
-            self.run_binary(generations, population, elitism, mutation_percent)
+            crossover_map = {
+                "single_point": crossover_single_point,
+                "two_point": crossover_two_point
+            }
+            mutation_map = {
+                "single_point": mutation_single_point,
+                "two_point": mutation_two_point,
+                "edge": mutation_edge
+            }
+            crossover_func = crossover_map.get(selected_crossover, crossover_two_point)
+            mutation_func = mutation_map.get(selected_mutation, mutation_edge)
+            self.run_binary(generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper)
 
-    def run_real(self, generations, population, elitism, mutation_percent):
-        num_variables = get_dimensions()
-        bounds = get_bounds()
-        lower, upper = bounds[0]
+    def run_real(self, generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper):
         bests, means, stds = [], [], []
 
         def fitness_func(ga, individual, _):
-            return evaluate_fitness(individual)
+            return self.evaluate_fitness(individual)
 
         def on_gen(ga):
             fitnesses = -np.array(ga.last_generation_fitness)
@@ -82,13 +133,13 @@ class GeneticApp(tk.Tk):
             num_generations=generations,
             sol_per_pop=population,
             num_parents_mating=population//2,
-            num_genes=num_variables,
+            num_genes=self.num_variables,
             init_range_low=lower,
             init_range_high=upper,
             gene_type=float,
             fitness_func=fitness_func,
-            crossover_type=crossover_average_func,
-            mutation_type=mutation_gaussian_func,
+            crossover_type=crossover_func,
+            mutation_type=mutation_func,
             mutation_percent_genes=mutation_percent,
             keep_elitism=elitism,
             on_generation=on_gen
@@ -97,17 +148,14 @@ class GeneticApp(tk.Tk):
         self.plot_results(bests, means, stds)
         self.save_results(bests, means, stds)
 
-    def run_binary(self, generations, population, elitism, mutation_percent):
-        num_variables = get_dimensions()
+    def run_binary(self, generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper):
         bits_per_variable = 20
-        num_genes = num_variables * bits_per_variable
-        bounds = get_bounds()
-        lower, upper = bounds[0]
+        num_genes = self.num_variables * bits_per_variable
         bests, means, stds = [], [], []
 
         def decode(ind):
             out = []
-            for i in range(num_variables):
+            for i in range(self.num_variables):
                 b = ''.join(str(bit) for bit in ind[i*bits_per_variable:(i+1)*bits_per_variable])
                 dec = int(b, 2)
                 real = lower + (dec / (2**bits_per_variable - 1)) * (upper - lower)
@@ -115,7 +163,7 @@ class GeneticApp(tk.Tk):
             return out
 
         def fitness_func(ga, individual, _):
-            return evaluate_fitness(decode(individual))
+            return self.evaluate_fitness(decode(individual))
 
         def on_gen(ga):
             fitnesses = -np.array(ga.last_generation_fitness)
@@ -132,8 +180,8 @@ class GeneticApp(tk.Tk):
             init_range_high=2,
             gene_type=int,
             fitness_func=fitness_func,
-            crossover_type=crossover_two_point,
-            mutation_type=mutation_edge,
+            crossover_type=crossover_func,
+            mutation_type=mutation_func,
             mutation_percent_genes=mutation_percent,
             keep_elitism=elitism,
             on_generation=on_gen
