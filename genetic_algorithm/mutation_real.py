@@ -12,10 +12,10 @@ class MutationReal:
             for i in range(individual.num_of_variables):
                 if random.random() < self.mutation_probability:
                     # wybieramy nową wartość zmiennej z zakresu
-                    min_val, max_val = individual.variables_ranges_list[i]
-                    new_value = random.uniform(min_val, max_val)
+                    low, high = individual.variables_ranges_list[i]
+                    new_value = random.uniform(low, high)
                     # przycinanie do zakresu
-                    new_value = max(min(new_value, max_val), min_val)
+                    new_value = max(min(new_value, high), low)
                     individual.mutate_gene(i, new_value)
         return self.individuals
 
@@ -26,11 +26,10 @@ class MutationReal:
             for i in range(individual.num_of_variables):
                 if random.random() < self.mutation_probability:
                     # bieżąca wartość zmiennej
-                    current_value = individual.variables[i]
-                    min_val, max_val = individual.variables_ranges_list[i]
-                    # szum
-                    mutated_value = current_value + random.gauss(0, sigma)
+                    value = individual.variables[i]
+                    low, high = individual.variables_ranges_list[i]
+                    stddev = (high - low) * 0.1
+                    mutated = value + random.gauss(0, stddev)
                     # przycinanie do zakresu
-                    mutated_value = max(min(mutated_value, max_val), min_val)
-                    individual.mutate_gene(i, mutated_value)
+                    individual.variables[i] = min(max(mutated, low), high)
         return self.individuals
