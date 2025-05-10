@@ -59,7 +59,7 @@ def run_real_genetic_algorithm(config):
         elitism_operator.choose_the_best_individuals()
         elites = elitism_operator.get_elite_list()
 
-        crossover_operator = CrossoverReal(population.individuals, crossover_probability, elitism_operator.number_of_elites)
+        crossover_operator = CrossoverReal(population.individuals, crossover_probability, elitism_operator.number_of_elites, variables_ranges_list)
         offspring = crossover_map[crossover_method](crossover_operator)
 
         mutation_operator = MutationReal(offspring, mutation_probability)
