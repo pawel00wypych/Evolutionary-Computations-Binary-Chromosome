@@ -4,6 +4,7 @@ import pygad
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import time
 
 from custom_crossover import crossover_average_func, crossover_arithmetic_func, crossover_linear_func, crossover_alpha_func, crossover_alpha_beta_func
 from custom_mutation import mutation_gaussian_func, mutation_uniform_func
@@ -26,8 +27,8 @@ class GeneticApp(tk.Tk):
 
         # Funkcja celu
         tk.Label(self, text="Funkcja celu:").pack()
-        self.function_var = tk.StringVar(value="hyperellipsoid")
-        ttk.Combobox(self, textvariable=self.function_var, values=["hyperellipsoid", "cec_f3"]).pack()
+        self.function_var = tk.StringVar(value="hypersphere")
+        ttk.Combobox(self, textvariable=self.function_var, values=["hypersphere", "rana", "hyperellipsoid", "Hybrid CEC 2014 (F1)", "Composition 6", "cec_f3"]).pack()
 
         # Krzyżowanie
         tk.Label(self, text="Krzyżowanie:").pack()
@@ -63,6 +64,12 @@ class GeneticApp(tk.Tk):
         self.mut_entry.insert(0, "5")
         self.mut_entry.pack()
 
+        # Krzyżowanie
+        tk.Label(self, text="Krzyżowanie (%):").pack()
+        self.cross_entry = tk.Entry(self)
+        self.cross_entry.insert(0, "5")
+        self.cross_entry.pack()
+
         # Start
         tk.Button(self, text="Start", command=self.run_ga).pack(pady=10)
 
@@ -71,6 +78,7 @@ class GeneticApp(tk.Tk):
         population = int(self.pop_entry.get())
         elitism = int(self.elite_entry.get())
         mutation_percent = int(self.mut_entry.get())
+        crossover_percent = int(self.cross_entry.get())
         representation = self.representation_var.get()
         selected_function = self.function_var.get()
         selected_crossover = self.crossover_var.get()
@@ -102,7 +110,7 @@ class GeneticApp(tk.Tk):
             }
             crossover_func = crossover_map.get(selected_crossover, crossover_average_func)
             mutation_func = mutation_map.get(selected_mutation, mutation_gaussian_func)
-            self.run_real(generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper)
+            self.run_real(generations, population, elitism, mutation_percent, crossover_percent, crossover_func, mutation_func, lower, upper)
         else:
             crossover_map = {
                 "single_point": crossover_single_point,
@@ -115,90 +123,175 @@ class GeneticApp(tk.Tk):
             }
             crossover_func = crossover_map.get(selected_crossover, crossover_two_point)
             mutation_func = mutation_map.get(selected_mutation, mutation_edge)
-            self.run_binary(generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper)
+            self.run_binary(generations, population, elitism, mutation_percent, crossover_percent, crossover_func, mutation_func, lower, upper)
 
-    def run_real(self, generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper):
-        bests, means, stds = [], [], []
+    def run_real(self, generations, population, elitism, mutation_percent, crossover_percent, crossover_func, mutation_func, lower, upper):
+        all_bests, all_means, all_stds = [], [], []
+        fitness_scores, execution_times, best_solutions = [], [], []
 
-        def fitness_func(ga, individual, _):
-            return self.evaluate_fitness(individual)
+        for i in range(5):
+            print(f"Run {i+1}/5...")
+            bests, means, stds = [], [], []
 
-        def on_gen(ga):
-            fitnesses = -np.array(ga.last_generation_fitness)
-            bests.append(fitnesses.min())
-            means.append(fitnesses.mean())
-            stds.append(fitnesses.std())
+            def fitness_func(ga, individual, _):
+                return self.evaluate_fitness(individual)
 
-        ga = pygad.GA(
-            num_generations=generations,
-            sol_per_pop=population,
-            num_parents_mating=population//2,
-            num_genes=self.num_variables,
-            init_range_low=lower,
-            init_range_high=upper,
-            gene_type=float,
-            fitness_func=fitness_func,
-            crossover_type=crossover_func,
-            mutation_type=mutation_func,
-            mutation_percent_genes=mutation_percent,
-            keep_elitism=elitism,
-            on_generation=on_gen
-        )
-        ga.run()
-        self.plot_results(bests, means, stds)
-        self.save_results(bests, means, stds)
+            def on_gen(ga):
+                fitnesses = -np.array(ga.last_generation_fitness)
+                bests.append(fitnesses.min())
+                means.append(fitnesses.mean())
+                stds.append(fitnesses.std())
 
-    def run_binary(self, generations, population, elitism, mutation_percent, crossover_func, mutation_func, lower, upper):
+            start_time = time.time()
+
+            ga = pygad.GA(
+                num_generations=generations,
+                sol_per_pop=population,
+                num_parents_mating=population//2,
+                num_genes=self.num_variables,
+                init_range_low=lower,
+                init_range_high=upper,
+                gene_type=float,
+                fitness_func=fitness_func,
+                crossover_type=crossover_func,
+                mutation_type=mutation_func,
+                mutation_percent_genes=mutation_percent,
+                crossover_probability=crossover_percent/100,
+                keep_elitism=elitism,
+                on_generation=on_gen
+            )
+
+            ga.run()
+
+            end_time = time.time() 
+            execution_times.append(end_time - start_time)
+
+            fitness_scores.append(-ga.best_solution()[1])
+            best_solutions.append(ga.best_solution()[0])
+
+            all_bests.append(bests)
+            all_means.append(means)
+            all_stds.append(stds)
+
+        best_result = min(fitness_scores)
+        worst_result = max(fitness_scores)
+        average_result = sum(fitness_scores) / len(fitness_scores)
+        average_time = sum(execution_times) / len(execution_times)
+        best_index = fitness_scores.index(best_result)
+        best_solution = best_solutions[best_index]
+
+        # Wyświetlenie wyników
+        text = f"Average fitness: {average_result:.6f}\n"
+        text += f"Best fitness: {best_result:.6f}\n"
+        text += f"Worst fitness: {worst_result:.6f}\n"
+        text += f"Average execution time: {average_time:.2f}s\n"
+        text += f"Best solution: {best_solution}\n"
+        print(text)
+
+        # Dwa wykresy z najlepszego przebiegu
+        self.plot_results(all_bests[best_index], all_means[best_index], all_stds[best_index])
+        self.save_results(all_bests[best_index], all_means[best_index], all_stds[best_index])
+
+    def run_binary(self, generations, population, elitism, mutation_percent, crossover_percent, crossover_func, mutation_func, lower, upper):
         bits_per_variable = 20
         num_genes = self.num_variables * bits_per_variable
-        bests, means, stds = [], [], []
+        all_bests, all_means, all_stds = [], [], []
+        fitness_scores, execution_times, best_solutions = [], [], []
 
-        def decode(ind):
-            out = []
-            for i in range(self.num_variables):
-                b = ''.join(str(bit) for bit in ind[i*bits_per_variable:(i+1)*bits_per_variable])
-                dec = int(b, 2)
-                real = lower + (dec / (2**bits_per_variable - 1)) * (upper - lower)
-                out.append(real)
-            return out
+        for i in range(5):
+            print(f"Run {i+1}/5...")
+            bests, means, stds = [], [], []
 
-        def fitness_func(ga, individual, _):
-            return self.evaluate_fitness(decode(individual))
+            def decode(ind):
+                out = []
+                for i in range(self.num_variables):
+                    b = ''.join(str(bit) for bit in ind[i*bits_per_variable:(i+1)*bits_per_variable])
+                    dec = int(b, 2)
+                    real = lower + (dec / (2**bits_per_variable - 1)) * (upper - lower)
+                    out.append(real)
+                return out
 
-        def on_gen(ga):
-            fitnesses = -np.array(ga.last_generation_fitness)
-            bests.append(fitnesses.min())
-            means.append(fitnesses.mean())
-            stds.append(fitnesses.std())
+            def fitness_func(ga, individual, _):
+                return self.evaluate_fitness(decode(individual))
 
-        ga = pygad.GA(
-            num_generations=generations,
-            sol_per_pop=population,
-            num_parents_mating=population//2,
-            num_genes=num_genes,
-            init_range_low=0,
-            init_range_high=2,
-            gene_type=int,
-            fitness_func=fitness_func,
-            crossover_type=crossover_func,
-            mutation_type=mutation_func,
-            mutation_percent_genes=mutation_percent,
-            keep_elitism=elitism,
-            on_generation=on_gen
-        )
-        ga.run()
-        self.plot_results(bests, means, stds)
-        self.save_results(bests, means, stds)
+            def on_gen(ga):
+                fitnesses = -np.array(ga.last_generation_fitness)
+                bests.append(fitnesses.min())
+                means.append(fitnesses.mean())
+                stds.append(fitnesses.std())
+
+            start_time = time.time()
+
+            ga = pygad.GA(
+                num_generations=generations,
+                sol_per_pop=population,
+                num_parents_mating=population//2,
+                num_genes=num_genes,
+                init_range_low=0,
+                init_range_high=2,
+                gene_type=int,
+                fitness_func=fitness_func,
+                crossover_type=crossover_func,
+                mutation_type=mutation_func,
+                mutation_percent_genes=mutation_percent,
+                crossover_probability=crossover_percent/100,
+                keep_elitism=elitism,
+                on_generation=on_gen
+            )
+
+            ga.run()
+
+            end_time = time.time() 
+            execution_times.append(end_time - start_time)
+
+            fitness_scores.append(-ga.best_solution()[1])
+            best_solutions.append(ga.best_solution()[0])
+
+            all_bests.append(bests)
+            all_means.append(means)
+            all_stds.append(stds)
+
+        best_result = min(fitness_scores)
+        worst_result = max(fitness_scores)
+        average_result = sum(fitness_scores) / len(fitness_scores)
+        average_time = sum(execution_times) / len(execution_times)
+        best_index = fitness_scores.index(best_result)
+        best_solution = best_solutions[best_index]
+
+        # Wyświetlenie wyników
+        text = f"Average fitness: {average_result:.6f}\n"
+        text += f"Best fitness: {best_result:.6f}\n"
+        text += f"Worst fitness: {worst_result:.6f}\n"
+        text += f"Average execution time: {average_time:.2f}s\n"
+        text += f"Best solution: {best_solution}\n"
+        print(text)
+
+        # Dwa wykresy z najlepszego przebiegu
+        self.plot_results(all_bests[best_index], all_means[best_index], all_stds[best_index])
+        self.save_results(all_bests[best_index], all_means[best_index], all_stds[best_index])
 
     def plot_results(self, bests, means, stds):
-        plt.plot(bests, label="Najlepszy")
-        plt.plot(means, label="Średnia")
-        plt.plot(stds, label="Odchylenie")
-        plt.xlabel("Generacja")
+        generations = list(range(1, len(bests)+1))
+
+        # wykres 1 - fitness
+        plt.figure(figsize=(10, 5))
+        plt.plot(generations, bests, label="Najlepszy", color='blue')
+        plt.title("Najlepszy wynik w każdej epoce")
+        plt.xlabel("Epoka")
         plt.ylabel("Wartość funkcji celu")
-        plt.title("Postęp optymalizacji")
-        plt.legend()
         plt.grid(True)
+        plt.legend()
+        plt.show()
+
+        # wykres 2 - średnia i odchylenie
+        plt.figure(figsize=(10, 5))
+        plt.plot(generations, means, label="Średnia", color='green')
+        plt.plot(generations, stds, label="Odchylenie", color='orange')
+        plt.title("Średnia i odchylenie standardowe")
+        plt.xlabel("Epoka")
+        plt.ylabel("Wartość funkcji celu")
+        plt.grid(True)
+        plt.legend()
         plt.show()
 
     def save_results(self, bests, means, stds):

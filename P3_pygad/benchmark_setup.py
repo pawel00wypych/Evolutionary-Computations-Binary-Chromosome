@@ -1,5 +1,6 @@
 import benchmark_functions as bf
 from opfunu import cec_based
+from opfunu.cec_based.cec2014 import F12014, F282014
 
 # Domyślne wartości
 FUNCTION_NAME = "hyperellipsoid"
@@ -17,6 +18,26 @@ def set_function(name):
         func = bf.Hyperellipsoid(n_dimensions=NUM_DIMENSIONS)
         bounds = func.suggested_bounds()
         evaluate_fitness = lambda x: -func._evaluate(x)
+
+    elif FUNCTION_NAME == "hypersphere":
+        func = bf.Hypersphere(n_dimensions=NUM_DIMENSIONS)
+        bounds = func.suggested_bounds()
+        evaluate_fitness = lambda x: -func._evaluate(x)
+
+    elif FUNCTION_NAME == "rana":
+        func = bf.Rana(n_dimensions=NUM_DIMENSIONS)
+        bounds = func.suggested_bounds()
+        evaluate_fitness = lambda x: -func._evaluate(x)
+
+    elif FUNCTION_NAME == "Hybrid CEC 2014 (F1)":
+        func = F12014(ndim=NUM_DIMENSIONS)
+        bounds = func.bounds
+        evaluate_fitness = lambda x: -func.evaluate(x)
+
+    elif FUNCTION_NAME == "Composition 6":
+        func = F282014(ndim=NUM_DIMENSIONS)
+        bounds = func.bounds
+        evaluate_fitness = lambda x: -func.evaluate(x)
 
     elif FUNCTION_NAME == "cec_f3":
         func = cec_based.cec2014.F32014(ndim=NUM_DIMENSIONS)
