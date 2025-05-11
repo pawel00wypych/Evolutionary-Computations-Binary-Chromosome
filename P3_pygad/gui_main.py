@@ -23,22 +23,27 @@ class GeneticApp(tk.Tk):
         # Reprezentacja
         tk.Label(self, text="Reprezentacja:").pack()
         self.representation_var = tk.StringVar(value="real")
-        ttk.Combobox(self, textvariable=self.representation_var, values=["real", "binary"]).pack()
+        representation_combo = ttk.Combobox(self, textvariable=self.representation_var, values=["real", "binary"])
+        representation_combo.pack()
+        representation_combo.bind("<<ComboboxSelected>>", self.update_options)
 
         # Funkcja celu
         tk.Label(self, text="Funkcja celu:").pack()
         self.function_var = tk.StringVar(value="hypersphere")
         ttk.Combobox(self, textvariable=self.function_var, values=["hypersphere", "rana", "hyperellipsoid", "Hybrid CEC 2014 (F1)", "Composition 6", "cec_f3"]).pack()
+        
 
         # Krzyżowanie
         tk.Label(self, text="Krzyżowanie:").pack()
-        self.crossover_var = tk.StringVar(value="average")
-        ttk.Combobox(self, textvariable=self.crossover_var, values=["average", "arithmetic", "linear", "alpha", "alpha_beta", "single_point", "two_point"]).pack()
+        self.crossover_var = tk.StringVar()
+        self.crossover_combobox = ttk.Combobox(self, textvariable=self.crossover_var)
+        self.crossover_combobox.pack()
 
         # Mutacja
         tk.Label(self, text="Mutacja:").pack()
-        self.mutation_var = tk.StringVar(value="gaussian")
-        ttk.Combobox(self, textvariable=self.mutation_var, values=["gaussian", "uniform", "single_point", "two_point", "edge"]).pack()
+        self.mutation_var = tk.StringVar()
+        self.mutation_combobox = ttk.Combobox(self, textvariable=self.mutation_var)
+        self.mutation_combobox.pack()
 
         # Generacje
         tk.Label(self, text="Liczba generacji:").pack()
@@ -49,7 +54,7 @@ class GeneticApp(tk.Tk):
         # Populacja
         tk.Label(self, text="Rozmiar populacji:").pack()
         self.pop_entry = tk.Entry(self)
-        self.pop_entry.insert(0, "50")
+        self.pop_entry.insert(0, "100")
         self.pop_entry.pack()
 
         # Elityzm
@@ -72,6 +77,25 @@ class GeneticApp(tk.Tk):
 
         # Start
         tk.Button(self, text="Start", command=self.run_ga).pack(pady=10)
+        
+        self.update_options()
+
+    def update_options(self, *_):
+        # dostępne opcje w zależności od reprezentacji
+        representation = self.representation_var.get()
+
+        if representation == "real":
+            self.crossover_combobox["values"] = ["average", "arithmetic", "linear", "alpha", "alpha_beta"]
+            self.crossover_var.set("average")
+
+            self.mutation_combobox["values"] = ["gaussian", "uniform"]
+            self.mutation_var.set("gaussian")
+        else:  # binary
+            self.crossover_combobox["values"] = ["single_point", "two_point"]
+            self.crossover_var.set("two_point")
+
+            self.mutation_combobox["values"] = ["single_point", "two_point", "edge"]
+            self.mutation_var.set("edge")
 
     def run_ga(self):
         generations = int(self.gen_entry.get())
